@@ -1,0 +1,5 @@
+# API keys and participants' data never go to GitHub
+.env
+results/
+node_modules/
+.DS_Store

@@ -1,0 +1,21 @@
+Junior Data Analyst, Operations (80–100%)
+Alpenrail Logistics SA (fictional company, for practice) · Lausanne · Hybrid
+
+About us
+Alpenrail Logistics moves freight by rail between Swiss industrial sites and the main European corridors. Our operations team plans about 400 trains a week and wants to make better use of its data.
+
+Your role
+- Build and maintain dashboards on on-time performance, wagon use and delays (Power BI).
+- Write SQL queries on our operations database and automate weekly reports in Python.
+- Analyse the causes of delays with the planning team and propose improvements.
+- Present your results to operations managers, in French and in English.
+
+Your profile
+- Master's degree in engineering, data science, management or a related field. Recent graduates are welcome.
+- Good SQL and Python (pandas); experience with Power BI or Tableau.
+- You can explain numbers to people who are not specialists.
+- French and English; German is a plus.
+- Interest in transport, logistics or sustainability.
+
+We offer
+A first job with real responsibility, mentoring by a senior analyst, and a team that ships improvements every month.

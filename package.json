@@ -1,0 +1,13 @@
+{
+  "name": "firstround-question-test",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Assignment 5 prototype: do free or cheap AI models write CV-tailored interview questions as relevant as a premium model's, and what does a run really cost?",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "mock": "node server.js --mock",
+    "report": "node scripts/report.js"
+  }
+}

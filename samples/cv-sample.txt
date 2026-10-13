@@ -1,0 +1,27 @@
+CANDIDATE (fictional and anonymised, for practice)
+Lausanne area
+
+EDUCATION
+MSc in Management of Technology and Entrepreneurship, EPFL, 2024–2026
+- Master's thesis: "Predicting delays in regional train networks with open data" (Python, scikit-learn, Swiss public transport open data)
+- Courses: data science for business, operations management, supply chain analytics
+BSc in Mechanical Engineering, EPFL, 2021–2024
+
+EXPERIENCE
+Data analyst intern, a Swiss retail group, Geneva, Feb–Jul 2025 (6 months)
+- Built 6 Power BI dashboards on stock levels for 40 stores, used every week by regional managers
+- Automated a weekly sales report in Python: from 4 hours of manual work to 10 minutes
+- Wrote SQL queries on the sales database (about 20 million rows)
+
+Teaching assistant, Operations management, EPFL, Sep 2025–Jan 2026
+- Ran exercise sessions for 60 students; prepared case studies on scheduling
+
+Project lead, student racing team, 2022–2023
+- Led a team of 5 on the cooling system design; managed the budget and the contacts with suppliers
+
+SKILLS
+Python (pandas, scikit-learn), SQL, Power BI, Excel, Git
+Languages: French (native), English (C1), German (B1)
+
+INTERESTS
+Cycling, rail travel, volunteering at a food bank

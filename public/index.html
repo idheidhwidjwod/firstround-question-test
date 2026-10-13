@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firstround question test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Crimson+Pro:ital,wght@1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">First<em>round</em></div>
+    <span class="badge" id="mode-badge">Question test</span>
+  </div>
+  <div class="wrap">
+    <ol class="steps" id="steps">
+      <li data-step="setup" class="on"><b>1</b>Setup</li>
+      <li data-step="rate"><b>2</b>Rate</li>
+      <li data-step="done"><b>3</b>Done</li>
+    </ol>
+  </div>
+</header>
+
+<main class="wrap" id="main" tabindex="-1">
+
+  <section id="view-setup">
+    <h1>Interview questions, <em class="s">tailored</em></h1>
+    <p class="lede">Paste an anonymised CV and the job ad. Four AI models each write the same 3 standard questions and
+      2 questions tailored to the CV, each with what a good answer should contain. The participant rates the four sets
+      without knowing which model wrote which.</p>
+
+    <div class="setup">
+      <div class="panel">
+        <div class="field">
+          <label class="label" for="jobad">Job ad</label>
+          <textarea id="jobad" rows="9" placeholder="Paste the full job ad"></textarea>
+        </div>
+        <div class="field">
+          <label class="label" for="cv">CV, anonymised</label>
+          <textarea id="cv" rows="12" placeholder="Paste the CV text"></textarea>
+          <p class="hint">Before pasting, remove the name, email, phone, address, photo, date of birth and nationality.
+            The free AI tiers may use what is sent to them.</p>
+        </div>
+        <button class="btn ghost small" id="load-sample" type="button">Fill with the sample CV and job ad</button>
+      </div>
+
+      <div class="side">
+        <div class="panel">
+          <div class="pair">
+            <div class="field">
+              <label class="label" for="facilitator">Your initials</label>
+              <input id="facilitator" maxlength="4" placeholder="CC" autocomplete="off">
+            </div>
+            <div class="field">
+              <label class="label" for="code">Participant</label>
+              <input id="code" maxlength="4" placeholder="P1" autocomplete="off">
+            </div>
+          </div>
+          <div class="field">
+            <p class="label" id="kind-label">The participant is</p>
+            <div class="choice" role="radiogroup" aria-labelledby="kind-label" id="kind">
+              <button class="opt" type="button" role="radio" aria-checked="false" data-kind="job seeker">
+                <b>Looking for a job</b><span>Uses the ad of a job they would apply to</span></button>
+              <button class="opt" type="button" role="radio" aria-checked="false" data-kind="in a job">
+                <b>Already in a job</b><span>Uses an ad for their own role and rates as if interviewing again</span></button>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="consent">
+            <span>The CV is anonymised and the participant agreed to take part.</span></label>
+          <div id="keys"></div>
+          <button class="btn wide" id="generate" type="button" disabled>Write the questions</button>
+          <p class="hint" id="missing"></p>
+          <p class="error" id="setup-error" hidden></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-loading" hidden>
+    <div class="loading">
+      <h2>Writing <em class="s">the questions</em></h2>
+      <p>Four models are working at the same time. This takes 10 to 60 seconds.</p>
+      <div class="bar"><i></i></div>
+    </div>
+  </section>
+
+  <section id="view-rate" hidden>
+    <h1>Rate <em class="s">each set</em></h1>
+    <p class="lede">Read each set as if you were preparing for this interview. Rate the two tailored questions and the
+      answer guidance. The sets come from different AI models, in random order.</p>
+    <div class="tabs" role="tablist" id="tabs" aria-label="Question sets"></div>
+    <div id="sets"></div>
+    <div class="panel comment">
+      <label class="label" for="comment">Comment, optional</label>
+      <textarea id="comment" rows="3" placeholder="Anything that felt off or especially good?"></textarea>
+    </div>
+    <div class="cta-row">
+      <span class="progress" id="rate-progress"></span>
+      <button class="btn" id="submit" type="button" disabled>Save the ratings</button>
+    </div>
+    <p class="error" id="rate-error" hidden></p>
+  </section>
+
+  <section id="view-done" hidden>
+    <h1>Thank <em class="s">you</em></h1>
+    <p class="lede">The ratings are saved on this computer. Which model wrote which set is revealed only in the report
+      (<code>npm run report</code>).</p>
+    <div class="cta-row left"><button class="btn" id="next" type="button">Next participant</button></div>
+  </section>
+
+</main>
+<script src="app.js" type="module"></script>
+</body>
+</html>
