@@ -59,10 +59,26 @@ async function initSetup() {
   const keys = $("#keys");
   try {
     const st = await api("/api/status");
+    const words = ["No", "One", "Two", "Three", "Four", "Five", "Six"];
+    document.querySelectorAll(".n-models").forEach((n) => (n.textContent = words[st.models] || String(st.models)));
+    if (st.ladder === "claude") {
+      $("#wait-time").textContent = "up to 3 minutes (the extra-high effort model thinks longest)";
+      $("#mode-badge").textContent = "Claude models";
+    }
     if (st.mock) {
       keys.append(el("p", { class: "note" }, "Mock mode: no AI is called and the questions are placeholders. Mock sessions stay out of the report."));
       $("#mode-badge").textContent = "Mock mode";
       $("#mode-badge").classList.add("mock");
+    } else if (st.ladder === "claude") {
+      const c = st.claude || {};
+      const list = el("ul", { class: "keys" });
+      if (!c.found) list.append(el("li", { class: "off" }, "The claude command was not found: install Claude Code and log in"));
+      else if (c.auth === "logged out") list.append(el("li", { class: "off" }, "claude is logged out: run claude auth login in a terminal"));
+      else list.append(el("li", {}, c.auth === "api key"
+        ? `claude ${c.version}, with the API key in .env`
+        : `claude ${c.version}, with your Claude login${c.plan ? ` (${c.plan} plan)` : ""}`));
+      list.append(el("li", {}, "Your CLAUDE.md, memory, skills, plugins and connectors are switched off for these runs"));
+      keys.append(list);
     } else {
       const list = el("ul", { class: "keys" });
       list.append(el("li", { class: st.keys.gemini ? "" : "off" }, st.keys.gemini ? "Gemini key found" : "Gemini key missing in .env: 3 sets will fail"));
@@ -101,7 +117,7 @@ $("#generate").addEventListener("click", async () => {
       facilitator: $("#facilitator").value, code: $("#code").value, kind: state.kind,
       consent: $("#consent").checked, cv: $("#cv").value, jobAd: $("#jobad").value,
     });
-    if (!data.sets.some((s) => s.ok)) throw new Error("None of the four models answered. Check the API keys in .env and the terminal running npm start.");
+    if (!data.sets.some((s) => s.ok)) throw new Error("No model answered. Check the API keys in .env (or the claude login) and the terminal running the app.");
     state.sessionId = data.sessionId;
     state.sets = data.sets;
     renderRate();

@@ -48,6 +48,53 @@ npm run report     # results per model and the decision
 
 The page only opens on your own computer, because the server listens on 127.0.0.1.
 
+## The Claude version: five Claude set-ups with your own Claude login
+
+No API key needed: it runs the `claude` command (Claude Code) on your computer with your Claude login.
+
+| Tier | Model | Effort | USD per 1M tokens, in / out |
+|---|---|---|---|
+| Cheapest | Claude Haiku 5.5 | default | 0.10 / 0.50 |
+| Mid | Claude Sonnet 5.5 | low | 2 / 10 |
+| Mid | Claude Sonnet 5.5 | high | 2 / 10 |
+| Premium | Claude Opus 5.5 | medium | 4 / 20 |
+| Premium | Claude Opus 5.5 | extra high (`xhigh`) | 4 / 20 |
+
+```bash
+npm run try-claude                         # in the terminal: the 5 set-ups on the sample CV, with tokens, cost, time
+npm run try-claude -- cv.txt job-ad.txt    # the same on your own text files (anonymise the CV first)
+npm run try-claude -- --full               # also print the standard questions and all the answer guidance
+npm run claude                             # the blind rating page with these 5 models (sets A to E)
+npm run claude-mock                        # the same page with placeholder questions
+```
+
+You need Claude Code installed and logged in (`claude auth login`). The runs use your plan's allowance;
+the costs shown are what the same tokens would cost at API list prices.
+
+**Your personal setup is switched off for every run**, so it behaves like a plain API call and costs as little as
+possible:
+
+- **Prompt:** our system prompt replaces Claude Code's long one, and there are no tools. A run is a single plain answer.
+- **Nothing personal is loaded:** no CLAUDE.md, memory, skills, plugins, hooks, MCP connectors, agents, output styles
+  or settings files (`--safe-mode`, `--setting-sources ""`, `--strict-mcp-config`, `--disable-slash-commands`).
+- **Clean start:** the command runs in an empty folder with a clean environment. That drops variables from a Claude
+  desktop session, such as a default effort level.
+- **No caching:** prompt caching is off. A one-off prompt would only pay the cache-write premium.
+- **Nothing saved:** `--no-session-persistence`, so CVs never land in `~/.claude`. The CV goes in through stdin, so it
+  doesn't show in the process list either.
+
+What a Claude login still adds to every request, about 400 tokens: an identity line, a short description of the
+environment, the date, and the account's email address. To remove those too, put an `ANTHROPIC_API_KEY` in
+`.env`: the command then runs with `--bare` and that key, billed per token. The exact command is in `lib/claude.js`.
+
+First run on the sample CV (14 Oct 2026), question generation only:
+
+| | Haiku 5.5 | Sonnet low | Sonnet high | Opus medium | Opus extra high |
+|---|---|---|---|---|---|
+| Thinking tokens | 3,215 | 0 | 1,591 | 206 | 3,497 |
+| Cost at list price | $0.0024 | $0.017 | $0.033 | $0.036 | $0.106 |
+| Time | 21 s | 12 s | 23 s | 15 s | 46 s |
+
 ## Running a session (about 15 minutes)
 
 1. **Before:** the participant picks a job ad and sends you their CV.
@@ -80,8 +127,10 @@ The page only opens on your own computer, because the server listens on 127.0.0.
 |---|---|
 | `server.js` | the local server: page, model calls, saving |
 | `lib/prompt.js` | the standard questions, the prompt, and the check of every reply |
-| `lib/models.js` | the four models, the API calls, token counting and cost |
-| `lib/mock.js` | placeholder replies for `npm run mock` |
+| `lib/models.js` | the two model ladders, the API calls, token counting and cost |
+| `lib/claude.js` | the isolated `claude -p` call of the Claude version |
+| `lib/mock.js` | placeholder replies for `npm run mock` and `npm run claude-mock` |
 | `public/` | the page (Firstround style) |
-| `scripts/report.js` | the results per model and the decision |
+| `scripts/report.js` | the results per model and the decision, one table per ladder |
+| `scripts/try-claude.js` | the Claude version in the terminal |
 | `samples/` | a fictional CV and job ad for practice |

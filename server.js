@@ -1,6 +1,7 @@
 // Firstround question test: the local server of the Assignment 5 prototype. No dependencies.
-//   npm start       real models (keys in .env)
-//   npm run mock    no keys needed: placeholder questions, saved as mock
+//   npm start            Gemini and Groq models (keys in .env)
+//   npm run claude       Claude models through the claude command and your own Claude login
+//   npm run mock         no keys needed: placeholder questions, saved as mock (claude-mock: 5 placeholder sets)
 // Privacy: the CV and the job ad go to the models and are never written to disk.
 // Only this computer can open the page (the server listens on 127.0.0.1).
 import http from "node:http";
@@ -9,14 +10,19 @@ import { existsSync, readFileSync } from "node:fs";
 import { randomUUID, randomInt } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { MODELS, KEY_NAMES, runAll } from "./lib/models.js";
+import { LADDERS, KEY_NAMES, runAll } from "./lib/models.js";
+import { claudeStatus } from "./lib/claude.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 loadEnv(path.join(ROOT, ".env"));
 const PORT = Number(process.env.PORT) || 8787;
 const MOCK = process.argv.includes("--mock") || process.env.MOCK === "1";
+const argLadder = process.argv.includes("--ladder") ? process.argv[process.argv.indexOf("--ladder") + 1] : null;
+const LADDER = argLadder || process.env.LADDER || "gemini";
+if (!LADDERS[LADDER]) throw new Error(`Unknown ladder "${LADDER}": use ${Object.keys(LADDERS).join(" or ")}`);
 const RESULTS = path.join(ROOT, "results", "sessions.jsonl");
-const LETTERS = ["A", "B", "C", "D"];
+const LETTERS = ["A", "B", "C", "D", "E", "F"].slice(0, LADDERS[LADDER].length);
+const cliStatus = LADDER === "claude" && !MOCK ? claudeStatus() : Promise.resolve(null);
 const openSessions = new Map(); // sessionId -> letters that can be rated, until the ratings are saved
 
 function loadEnv(file) {
@@ -79,9 +85,9 @@ async function serveStatic(res, urlPath) {
   }
 }
 
-function status(res) {
+async function status(res) {
   const keys = Object.fromEntries(Object.entries(KEY_NAMES).map(([p, k]) => [p, Boolean(process.env[k])]));
-  send(res, 200, { mock: MOCK, keys, models: MODELS.length });
+  send(res, 200, { mock: MOCK, ladder: LADDER, models: LADDERS[LADDER].length, keys, claude: await cliStatus });
 }
 
 async function generate(req, res) {
@@ -101,13 +107,13 @@ async function generate(req, res) {
   if (missing.length) throw fail(400, `Missing: ${missing.join(", ")}.`);
   if (cv.length > 20000 || jobAd.length > 20000) throw fail(400, "The CV and the job ad must each be under 20,000 characters.");
 
-  const runs = await runAll(cv, jobAd, { mock: MOCK });
+  const runs = await runAll(cv, jobAd, { ladder: LADDER, mock: MOCK });
   const letters = shuffle(LETTERS);
   const placed = runs.map((r, i) => ({ letter: letters[i], ...r })).sort((x, y) => x.letter.localeCompare(y.letter));
   const sessionId = randomUUID();
   for (const r of placed) if (!r.ok) console.log(`  set ${r.letter} (${r.model}) failed: ${r.error}`);
   if (!placed.some((r) => r.ok)) return send(res, 200, { sessionId: null, sets: placed.map((r) => ({ letter: r.letter, ok: false })) });
-  await save({ type: "generated", sessionId, at: new Date().toISOString(), mock: MOCK,
+  await save({ type: "generated", sessionId, at: new Date().toISOString(), mock: MOCK, ladder: LADDER,
                participant: { facilitator, code, kind }, input: { cvChars: cv.length, jobAdChars: jobAd.length },
                runs: placed });
   openSessions.set(sessionId, placed.filter((r) => r.ok).map((r) => r.letter));
@@ -138,7 +144,7 @@ async function rate(req, res) {
 http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, "http://localhost");
-    if (req.method === "GET" && url.pathname === "/api/status") return status(res);
+    if (req.method === "GET" && url.pathname === "/api/status") return await status(res);
     if (req.method === "POST" && url.pathname === "/api/generate") return await generate(req, res);
     if (req.method === "POST" && url.pathname === "/api/rate") return await rate(req, res);
     if (req.method === "GET") return await serveStatic(res, url.pathname);
@@ -149,9 +155,15 @@ http.createServer(async (req, res) => {
   }
 }).listen(PORT, "127.0.0.1", () => {
   console.log(`Firstround question test: http://127.0.0.1:${PORT}${MOCK ? "   (MOCK: no AI is called)" : ""}`);
-  if (!MOCK) {
+  console.log(`  Models: ${LADDERS[LADDER].map((m) => m.label).join(" · ")}`);
+  if (!MOCK && LADDER === "gemini") {
     for (const [provider, key] of Object.entries(KEY_NAMES)) {
       if (!process.env[key]) console.log(`  ${key} is missing in .env: the ${provider} models will fail.`);
     }
+  }
+  if (!MOCK && LADDER === "claude") {
+    cliStatus.then((s) => console.log(s?.found
+      ? `  claude ${s.version}: ${s.auth === "api key" ? "API key from .env (--bare)" : s.auth === "account" ? `your Claude login${s.plan ? ` (${s.plan})` : ""}` : "NOT LOGGED IN: run claude auth login"}`
+      : "  The claude command was not found: install Claude Code and log in."));
   }
 });
