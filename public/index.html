@@ -94,6 +94,17 @@
   <section id="view-done" hidden>
     <h1>Thank <em class="s">you</em></h1>
     <p class="lede" id="done-text">The ratings are saved on this computer.</p>
+    <div class="panel stay">
+      <label class="label" for="contact-email">Stay informed (optional)</label>
+      <p class="hint">Leave your email to hear how Firstround develops. We keep it in a separate list, not with your
+        answers, and use it only for news about Firstround. Ask us any time to remove it.</p>
+      <div class="stay-row">
+        <input id="contact-email" type="email" placeholder="you@example.com" autocomplete="email">
+        <button class="btn small" id="contact-send" type="button">Keep me posted</button>
+      </div>
+      <p class="note" id="contact-done" hidden>Thanks, we'll keep you posted.</p>
+      <p class="error" id="contact-error" hidden></p>
+    </div>
     <div class="cta-row left"><button class="btn" id="next" type="button">Next participant</button></div>
   </section>
 

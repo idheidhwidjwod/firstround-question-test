@@ -195,6 +195,38 @@ $("#submit").addEventListener("click", async () => {
   }
 });
 
+// ---------------------------------------------------------------- staying informed (optional email, end screen)
+
+function resetContact() {
+  $("#contact-email").value = "";
+  $("#contact-send").disabled = false;
+  $("#contact-done").hidden = true;
+  $("#contact-error").hidden = true;
+}
+
+async function sendContact() {
+  const button = $("#contact-send");
+  if (button.disabled) return;
+  $("#contact-error").hidden = true;
+  button.disabled = true;
+  button.textContent = "Sending…";
+  try {
+    await api("/api/contact", { email: $("#contact-email").value });
+    $("#contact-email").value = "";
+    $("#contact-done").hidden = false;
+  } catch (e) {
+    $("#contact-error").textContent = e.message;
+    $("#contact-error").hidden = false;
+    button.disabled = false;
+  }
+  button.textContent = "Keep me posted";
+}
+
+$("#contact-send").addEventListener("click", sendContact);
+$("#contact-email").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendContact();
+});
+
 // ---------------------------------------------------------------- next participant
 
 $("#next").addEventListener("click", () => {
@@ -202,6 +234,7 @@ $("#next").addEventListener("click", () => {
   $("#consent").checked = false;
   state.kind = null;
   document.querySelectorAll("#kind .opt").forEach((o) => o.setAttribute("aria-checked", "false"));
+  resetContact();
   checkSetup();
   show("setup");
 });

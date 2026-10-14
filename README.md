@@ -23,6 +23,8 @@ CHF 0.30 including card fees, which is the 80% margin of a typical SaaS. That on
    Then they answer **two last questions about paying**: how they would prefer to pay (per interview, a pack of 10,
    a monthly subscription, or not at all), and the most they would spend on interview practice in one month
    (nothing, up to CHF 5, 10, 20 or 30, or more). The questions are in `lib/survey.js`.
+   On the end screen they can leave an **email to hear how Firstround develops** (optional). It goes to a separate
+   list with the date only, never with their answers.
 5. The app logs each model's **real token use, thinking included**, its list-price cost and its speed for the full
    interview it wrote.
 
@@ -165,13 +167,16 @@ was 7,300 tokens.
    - A number counts once the ratings are saved, so an abandoned session gives its number back.
 4. **Rate:** the participant reads the interview as if preparing for it and rates each question's relevance.
    Don't say which model wrote which question. Anything wrong or invented goes in the comment box.
-5. **Save.** "Next participant" clears the CV and the job ad.
+5. **Save.** On the end screen, the participant can leave an email to stay informed (optional). "Next participant"
+   clears the CV, the job ad and the email.
 
 ## Results
 
 - Sessions are saved on your computer in `results/sessions.jsonl`. This file is never pushed to GitHub.
   - **Never saved:** the text of the CV and of the job ad.
-  - **Saved:** the questions, ratings, token counts, cost and timing.
+  - **Saved:** the questions, ratings, answers about paying, token counts, cost and timing.
+  - **Emails** go to the team sheet only. One that could not be sent waits in `results/contacts-unsent.jsonl` until
+    `npm run sync-sheet` sends it, and is then deleted from the computer.
 - `npm run report` prints the table for the deck and writes `results/report.md`.
 - **To combine the team's sessions,** collect everyone's `sessions.jsonl` and run
   `npm run report -- mine.jsonl andrea.jsonl …`. Numbers restart at P1 on each computer, so the report counts
@@ -183,16 +188,22 @@ Every rated interview is also copied to one shared Google Sheet, so the whole te
 Nobody has to set anything up: the sheet's address is built into `lib/sheet.js`. Practice (mock) sessions are not sent.
 
 - **Tabs:**
-  - **Summary:** share of questions rated 4–5 per model, cost and time per model, number of people, and the answers
-    to the two questions about paying.
-  - **Sessions:** one row per interview, with the answers to the two questions about paying.
+  - **Summary:** share of questions rated 4–5 per model, cost and time per model, and number of people. From row 35:
+    how many people gave each answer to the two questions about paying.
+  - **Sessions:** one row per interview. The answers about paying are in columns G ("Preferred payment") and
+    H ("Most per month").
   - **Questions:** one row per question, with its model, relevance score and notes.
   - **Runs:** one row per model, with tokens, cost and time.
+  - **Contacts:** the emails left on the end screen, with the date only: no time, session or participant number,
+    so they are never linked to the answers.
 - **Participant numbers:** the sheet numbers participants for the whole team (P1, P2…). The page never shows them.
-- **What goes there:** the questions, notes, models, scores, comment, tokens, cost and time. Never the CV or the
-  job ad. Anyone with the address can add rows, which is fine for this data.
+- **What goes there:** the questions, notes, models, scores, answers about paying, comment, tokens, cost and time,
+  plus the emails people choose to leave. Never the CV or the job ad. Anyone with the address can add rows, but the
+  web app never sends data back: only people the sheet is shared with can see it, emails included.
 - **If a copy fails** (no network, say), the interview is still saved on the computer. `npm run sync-sheet` sends
-  what is missing, and an interview is never added twice. `npm run sync-sheet -- --test` checks that the sheet answers.
+  what is missing, emails included, and nothing is ever added twice.
+- **Check the sheet:** `npm run sync-sheet -- --test` prints the sheet's name, the version of its script, and how
+  many interviews it holds (and how many with answers about paying).
 
 **One-time set-up by the sheet's owner** (about 5 minutes):
 1. Create a Google Sheet, then open Extensions → Apps Script.
@@ -200,6 +211,14 @@ Nobody has to set anything up: the sheet's address is built into `lib/sheet.js`.
 3. Deploy → New deployment → type "Web app". Set Execute as: Me, and Who has access: Anyone. Deploy and allow
    access. A school account may not offer "Anyone"; use a personal Google account then.
 4. Copy the web app URL (it ends in `/exec`) into `lib/sheet.js` as `TEAM_SHEET_URL`, and push to GitHub.
+
+**After a change to `sheet/apps-script.gs`** (the owner, 2 minutes):
+1. Extensions → Apps Script: replace the editor's content with the new file, and save.
+2. Deploy → **Manage deployments** → the pencil (Edit) → Version: **New version** → Deploy. This keeps the same URL.
+   "New deployment" would make a new URL, and the app would keep sending to the old script.
+3. Check: `npm run sync-sheet -- --test` must print the script version of the new file (`SCRIPT_VERSION`).
+4. If interviews were sent while the old script ran, `npm run sync-sheet -- --all` sends them again: the sheet adds
+   none twice, but fills in the answers about paying that an older script left out.
 
 **Decision criteria**, set before the test (Build-to-Learn card), applied to every question's relevance:
 - **Success:** a cheap model (free or cheapest) has ≥ 70% of its questions rated 4–5, within 10 points of premium.
@@ -223,6 +242,6 @@ Each interview gives every model one question, so 8 people give each model about
 | `scripts/try.js` | the Claude or ChatGPT version in the terminal (`npm run try-claude`, `npm run try-chatgpt`) |
 | `lib/survey.js` | the two questions about paying, asked after the interview questions |
 | `lib/sheet.js` | the copy to the team's Google Sheet (its address is set here) |
-| `sheet/apps-script.gs` | the script that receives the interviews inside the Google Sheet |
-| `scripts/sync-sheet.js` | sends to the sheet what is missing (`npm run sync-sheet`) |
+| `sheet/apps-script.gs` | the script that receives the interviews and the emails inside the Google Sheet |
+| `scripts/sync-sheet.js` | sends to the sheet what is missing (`npm run sync-sheet`; `-- --test` checks it, `-- --all` fills in gaps) |
 | `samples/` | a fictional CV and job ad for practice (paste them into the page, or `npm run try-claude` uses them) |

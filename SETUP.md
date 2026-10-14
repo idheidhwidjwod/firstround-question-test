@@ -74,7 +74,7 @@ You don't need `npm install` (the app has no dependencies) or a `.env` file. Run
    ```bash
    npm run sync-sheet -- --test
    ```
-   It should print `The sheet answers: "Log week 5".`
+   It should print `The sheet answers: "Log week 5", script version 3.`, then how many interviews the sheet holds.
 2. **Does the page work?** Start the practice version, which uses placeholder questions and sends nothing anywhere:
    ```bash
    npm run claude-mock
@@ -109,12 +109,13 @@ Then follow "Running a session" in the [README](README.md#running-a-session-abou
 2. Paste the job ad and the CV, then click "Write the questions". It takes up to about a minute.
 3. The participant rates the 5 questions and answers the two last questions about paying, then you save.
 
-The end screen confirms "saved on this computer and in the team's Google Sheet".
+The end screen confirms "saved on this computer and in the team's Google Sheet". There the participant can also leave
+an email to hear how Firstround develops (optional); it goes to a separate list in the sheet, never with the answers.
 
 Keep the terminal open while the page is in use, and press Ctrl+C when you are done.
 
 **Privacy:** only anonymised CVs, and never a name anywhere. The CV and the job ad stay on your computer: neither
-the app nor the sheet keeps them.
+the app nor the sheet keeps them. An email left on the end screen goes to the sheet's Contacts tab with the date only.
 
 ## 6. Get updates
 
@@ -145,7 +146,13 @@ Then start the app again.
 | The terminal says "Google Sheet: not set up yet" | Your copy is old. Run `git pull` and restart. |
 | The end screen says the copy to the Google Sheet failed | The ratings are safe on your computer. When the internet is back, run `npm run sync-sheet`: it sends what is missing, and never twice. |
 | `npm run sync-sheet -- --test` says HTTP 403 or "did not answer" | Check your internet. If it keeps failing, tell Christophe: the sheet's script may need to be authorised again by its owner. |
+| `npm run sync-sheet -- --test` says "script version 1 or 2", or a lower version than 3 | The sheet runs an older script. Tell Christophe, who owns the sheet: the README says how to redeploy it ("After a change to `sheet/apps-script.gs`"). |
+| The terminal says "email not sent" | The email waits on your computer in `results/contacts-unsent.jsonl`. Run `npm run sync-sheet` when the internet is back (or after the sheet's script is redeployed): it sends the email and deletes it from your computer. |
 | Something else | Run `claude doctor` for Claude Code problems, and send the team the last lines of the terminal. |
 
-**Where do results go?** To the team sheet (tab Summary for the per-model numbers), and on your computer to
-`results/sessions.jsonl`. `npm run report` prints the numbers from your computer's sessions only.
+**Where do results go?** To the team sheet, and on your computer to `results/sessions.jsonl`. In the sheet:
+- **Summary**: the numbers per model, and from row 35 how many people gave each answer about paying;
+- **Sessions**: one row per interview, with the answers about paying in columns G and H;
+- **Contacts**: the emails left on the end screen.
+
+`npm run report` prints the numbers from your computer's sessions only.

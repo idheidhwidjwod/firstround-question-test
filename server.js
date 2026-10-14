@@ -16,7 +16,7 @@ import { LADDERS, KEY_NAMES, runAll } from "./lib/models.js";
 import { mixInterview } from "./lib/prompt.js";
 import { claudeStatus } from "./lib/claude.js";
 import { codexStatus } from "./lib/codex.js";
-import { sheetConnected, pushSession } from "./lib/sheet.js";
+import { sheetConnected, pushSession, pushContact } from "./lib/sheet.js";
 import { SURVEY } from "./lib/survey.js";
 
 loadEnv();
@@ -26,6 +26,8 @@ const argLadder = process.argv.includes("--ladder") ? process.argv[process.argv.
 const LADDER = argLadder || process.env.LADDER || "gemini";
 if (!LADDERS[LADDER]) throw new Error(`Unknown ladder "${LADDER}": use ${Object.keys(LADDERS).join(" or ")}`);
 const RESULTS = path.join(ROOT, "results", "sessions.jsonl");
+// Emails that could not reach the sheet yet, until npm run sync-sheet sends them (the sheet is the only list).
+const UNSENT_CONTACTS = path.join(ROOT, "results", "contacts-unsent.jsonl");
 // The command behind the Claude or ChatGPT ladder: found? logged in? (checked once, at start)
 const cliStatus = MOCK ? Promise.resolve(null)
   : LADDER === "claude" ? claudeStatus() : LADDER.startsWith("chatgpt") ? codexStatus() : Promise.resolve(null);
@@ -147,6 +149,23 @@ async function generate(req, res) {
     ({ position, question: q.question, wants: q.wants, tips: q.tips })) });
 }
 
+// An email left on the end screen to stay informed. It goes to the sheet's Contacts tab with the date only: no time,
+// session or participant number, so it is never linked to the answers. Practice (mock) emails go nowhere.
+async function contact(req, res) {
+  const b = await readBody(req);
+  const email = String(b.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) throw fail(400, "That doesn't look like an email address.");
+  if (MOCK) return send(res, 200, { ok: true });
+  const date = new Date().toISOString().slice(0, 10);
+  const sheet = sheetState() === "on" ? await pushContact(email, date) : { ok: false, error: "no sheet set up" };
+  if (!sheet.ok) {
+    await mkdir(path.dirname(UNSENT_CONTACTS), { recursive: true });
+    await appendFile(UNSENT_CONTACTS, JSON.stringify({ date, email }) + "\n");
+    console.log(`  Google Sheet: email not sent (${sheet.error}). It waits in results/contacts-unsent.jsonl: run npm run sync-sheet later.`);
+  }
+  send(res, 200, { ok: true });
+}
+
 async function rate(req, res) {
   const b = await readBody(req);
   const open = openSessions.get(b.sessionId);
@@ -187,6 +206,7 @@ http.createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/api/status") return await status(res);
     if (req.method === "POST" && url.pathname === "/api/generate") return await generate(req, res);
     if (req.method === "POST" && url.pathname === "/api/rate") return await rate(req, res);
+    if (req.method === "POST" && url.pathname === "/api/contact") return await contact(req, res);
     if (req.method === "GET") return await serveStatic(res, url.pathname);
     send(res, 405, { error: "Method not allowed." });
   } catch (e) {
