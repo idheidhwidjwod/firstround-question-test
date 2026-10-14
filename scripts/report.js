@@ -24,7 +24,10 @@ const generated = new Map();
 const rated = new Map();
 let oldFormat = 0;
 for (const [fileIndex, f] of files.entries()) {
-  if (!existsSync(f)) { console.error(`No such file: ${f}`); continue; }
+  if (!existsSync(f)) {
+    if (args.some((a) => !a.startsWith("--"))) console.error(`No such file: ${f}`);   // the default file appears with the first session
+    continue;
+  }
   for (const line of readFileSync(f, "utf8").split("\n")) {
     if (!line.trim()) continue;
     const r = JSON.parse(line);
