@@ -11,6 +11,7 @@
     "claude": "node server.js --ladder claude",
     "claude-mock": "node server.js --ladder claude --mock",
     "try-claude": "node scripts/try-claude.js",
-    "report": "node scripts/report.js"
+    "report": "node scripts/report.js",
+    "sync-sheet": "node scripts/sync-sheet.js"
   }
 }

@@ -28,9 +28,6 @@
 
   <section id="view-setup">
     <h1>Interview questions, <em class="s">tailored</em></h1>
-    <p class="lede">Paste an anonymised CV and the job ad. <span class="n-models">Four</span> AI models each write the
-      same 3 standard questions and 2 questions tailored to the CV, each with what a good answer should contain. The
-      participant rates the sets without knowing which model wrote which.</p>
 
     <div class="setup">
       <div class="panel">
@@ -49,16 +46,6 @@
 
       <div class="side">
         <div class="panel">
-          <div class="pair">
-            <div class="field">
-              <label class="label" for="facilitator">Your initials</label>
-              <input id="facilitator" maxlength="4" placeholder="CC" autocomplete="off">
-            </div>
-            <div class="field">
-              <label class="label" for="code">Participant</label>
-              <input id="code" maxlength="4" placeholder="P1" autocomplete="off">
-            </div>
-          </div>
           <div class="field">
             <p class="label" id="kind-label">The participant is</p>
             <div class="choice" role="radiogroup" aria-labelledby="kind-label" id="kind">
@@ -89,14 +76,13 @@
   </section>
 
   <section id="view-rate" hidden>
-    <h1>Rate <em class="s">each set</em></h1>
-    <p class="lede">Read each set as if you were preparing for this interview. Rate the two tailored questions and the
-      answer guidance. The sets come from different AI models, in random order.</p>
-    <div class="tabs" role="tablist" id="tabs" aria-label="Question sets"></div>
-    <div id="sets"></div>
+    <h1>Rate <em class="s">each question</em></h1>
+    <p class="lede">Read each question as if you were preparing for this interview, with the notes under it, and rate
+      how relevant it is for this job and this CV. The questions come from different AI models.</p>
+    <div class="set" id="questions"></div>
     <div class="panel comment">
       <label class="label" for="comment">Comment, optional</label>
-      <textarea id="comment" rows="3" placeholder="Anything that felt off or especially good?"></textarea>
+      <textarea id="comment" rows="3" placeholder="Anything wrong, invented, or especially good?"></textarea>
     </div>
     <div class="cta-row">
       <span class="progress" id="rate-progress"></span>
@@ -107,8 +93,7 @@
 
   <section id="view-done" hidden>
     <h1>Thank <em class="s">you</em></h1>
-    <p class="lede">The ratings are saved on this computer. Which model wrote which set is revealed only in the report
-      (<code>npm run report</code>).</p>
+    <p class="lede" id="done-text">The ratings are saved on this computer.</p>
     <div class="cta-row left"><button class="btn" id="next" type="button">Next participant</button></div>
   </section>
 

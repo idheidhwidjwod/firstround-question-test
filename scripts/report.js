@@ -1,7 +1,9 @@
 // The results per model and the decision against the criteria set before the test (Build-to-Learn card).
-// One table per ladder (Gemini/Groq, or Claude) found in the files.
+// Each session is one interview mixing the models (question n from one model); every question gets a relevance
+// score from 1 to 5. One table per ladder (Gemini/Groq, or Claude) found in the files.
 //   npm run report                                  this computer's sessions (results/sessions.jsonl)
-//   npm run report -- results/sessions.jsonl other.jsonl   several facilitators' files together
+//   npm run report -- results/sessions.jsonl other.jsonl   several computers' files together
+// Participant numbers restart at P1 on every computer, so a person is a (file, number) pair.
 //   npm run report -- --include-mock                keep mock sessions (to try the report)
 // Prints Markdown and writes it to results/report.md.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
@@ -20,19 +22,23 @@ const ESTIMATE = { input: 2300, output: 200, thinking: { "flash-lite": 0, "gpt-o
 
 const generated = new Map();
 const rated = new Map();
-for (const f of files) {
+let oldFormat = 0;
+for (const [fileIndex, f] of files.entries()) {
   if (!existsSync(f)) { console.error(`No such file: ${f}`); continue; }
   for (const line of readFileSync(f, "utf8").split("\n")) {
     if (!line.trim()) continue;
     const r = JSON.parse(line);
-    if (r.type === "generated" && (includeMock || !r.mock)) generated.set(r.sessionId, { ladder: "gemini", ...r });
+    if (r.type === "generated" && (includeMock || !r.mock)) {
+      if (!r.interview) { oldFormat++; continue; }   // sessions from the first version (five separate sets)
+      generated.set(r.sessionId, { ladder: "gemini", ...r, fileIndex });
+    }
     if (r.type === "rated") rated.set(r.sessionId, r);
   }
 }
 
 const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
-const share45 = (p) => (p.tailored.length ? p.tailored.filter((v) => v >= 4).length / p.tailored.length : null);
-const pct = (x) => (x == null ? "–" : `${Math.round(100 * x)}%`);
+const share45 = (xs) => (xs.length ? xs.filter((v) => v >= 4).length / xs.length : null);
+const pct = (xs) => (xs.length ? `${Math.round(100 * share45(xs))}% (${xs.filter((v) => v >= 4).length}/${xs.length})` : "–");
 const num = (x, d = 1) => (x == null ? "–" : x.toFixed(d));
 const int = (x) => (x == null ? "–" : Math.round(x).toLocaleString("en-US"));
 const usd = (x) => (x == null ? "–" : x < 0.01 ? `$${x.toFixed(4)}` : `$${x.toFixed(3)}`);
@@ -40,39 +46,38 @@ const usd = (x) => (x == null ? "–" : x < 0.01 ? `$${x.toFixed(4)}` : `$${x.to
 function ladderReport(ladder) {
   const models = LADDERS[ladder];
   const sessions = [...generated.values()].filter((g) => g.ladder === ladder);
-  const per = Object.fromEntries(models.map((m) => [m.id, { m, runs: [], tailored: [], guidance: [], flags: 0, shown: 0 }]));
+  const per = Object.fromEntries(models.map((m) => [m.id, { m, runs: [], all: [], tailored: [], standard: [] }]));
   for (const g of sessions) for (const run of g.runs) if (!run.configError) per[run.modelId]?.runs.push(run);
 
   const ratedSessions = sessions.filter((g) => rated.has(g.sessionId));
   for (const g of ratedSessions) {
     const ratings = rated.get(g.sessionId).ratings;
-    for (const run of g.runs) {
-      const r = ratings[run.letter];
-      const p = per[run.modelId];
-      if (!run.ok || !r || !p) continue;
-      p.tailored.push(r.q4, r.q5);
-      p.guidance.push(r.guidance);
-      p.flags += r.flags.length;
-      p.shown += 5;
+    for (const slot of g.interview) {
+      const v = ratings[slot.position];
+      const p = per[slot.modelId];
+      if (!v || !p) continue;
+      p.all.push(v);
+      (slot.position >= 4 ? p.tailored : p.standard).push(v);
     }
   }
   const people = new Map();
-  for (const g of ratedSessions) people.set(`${g.participant.facilitator}|${g.participant.code}`, g.participant.kind);
+  for (const g of ratedSessions) {
+    people.set(`${g.fileIndex}|${rated.get(g.sessionId).participant || g.participant.code}`, g.participant.kind);
+  }
   const kinds = [...people.values()];
 
   const rows = [
-    ["Tailored questions rated 4 or 5 (primary metric)", (p) => (p.tailored.length
-      ? `${pct(share45(p))} (${p.tailored.filter((v) => v >= 4).length}/${p.tailored.length})` : "–")],
-    ["Mean relevance of tailored questions (1–5)", (p) => num(avg(p.tailored))],
-    ["Answer guidance, mean usefulness (1–5)", (p) => num(avg(p.guidance))],
-    ["Questions flagged wrong, invented or inappropriate", (p) => (p.shown ? `${p.flags} of ${p.shown}` : "–")],
-    ["Runs that worked", (p) => `${p.runs.filter((r) => r.ok).length}/${p.runs.length}`],
+    ["Questions rated 4 or 5 (primary metric)", (p) => pct(p.all)],
+    ["Tailored questions rated 4 or 5", (p) => pct(p.tailored)],
+    ["Standard questions rated 4 or 5", (p) => pct(p.standard)],
+    ["Mean relevance (1–5)", (p) => num(avg(p.all))],
+    ["Runs that worked (each run writes a full interview)", (p) => `${p.runs.filter((r) => r.ok).length}/${p.runs.length}`],
     ["Tokens per run: input / output / thinking", (p) => {
       const u = (k) => avg(p.runs.map((r) => r.usage[k]));
       const est = p.runs.some((r) => r.usage.thinkingEstimated) ? " (thinking estimated)" : "";
       return p.runs.length ? `${int(u("input"))} / ${int(u("output"))} / ${int(u("thinking"))}${est}` : "–";
     }],
-    ["Cost per run, list price (question generation only)", (p) => {
+    ["Cost per run, list price (the 5 questions only)", (p) => {
       const c = avg(p.runs.map((r) => r.costUSD));
       return c == null ? "–" : `${usd(c)} (CHF ${(c * USD_CHF).toFixed(4)})`;
     }],
@@ -83,8 +88,8 @@ function ladderReport(ladder) {
 
   const cheap = models.filter((m) => m.role === "cheap");
   const premiumModel = models.find((m) => m.role === "premium");
-  const premium = share45(per[premiumModel.id]);
-  const cheapShares = cheap.map((m) => share45(per[m.id]));
+  const premium = share45(per[premiumModel.id].all);
+  const cheapShares = cheap.map((m) => share45(per[m.id].all));
   const cheapNames = cheap.map((m) => m.label).join(" or ");
   let decision;
   if (people.size < 8) {
@@ -106,13 +111,13 @@ function ladderReport(ladder) {
     `## ${title}`,
     "",
     `People who rated: **${people.size}** (${kinds.filter((k) => k === "job seeker").length} looking for a job, ` +
-      `${kinds.filter((k) => k === "in a job").length} in a job) · rated sessions: ${ratedSessions.length} · all sessions: ${sessions.length}`,
+      `${kinds.filter((k) => k === "in a job").length} in a job) · rated interviews: ${ratedSessions.length} · all: ${sessions.length}`,
     "",
     `| | ${models.map((m) => `${m.tier}: ${m.label}`).join(" | ")} |`,
     `|---|${models.map(() => "---").join("|")}|`,
     ...rows.map(([label, f]) => `| ${label} | ${models.map((m) => f(per[m.id])).join(" | ")} |`),
     "",
-    `Decision (criteria set before the test): ${decision}`,
+    `Decision (criteria set before the test, on all questions): ${decision}`,
     ...(failed.length ? ["", "Runs that failed:", ...failed.map((x) => `- ${x}`)] : []),
     ...(comments.length ? ["", "Comments:", ...comments.map((c) => `- ${c.replace(/\s+/g, " ")}`)] : []),
     "",
@@ -124,11 +129,13 @@ const md = [
   "# Question test: results",
   "",
   `${new Date().toISOString().slice(0, 16).replace("T", " ")} UTC · ${files.map((f) => path.relative(ROOT, f) || f).join(", ")}` +
-    `${includeMock ? " · **mock sessions included**" : ""}`,
+    `${includeMock ? " · **mock sessions included**" : ""}` +
+    `${oldFormat ? ` · ${oldFormat} session(s) from the first version (separate sets) left out` : ""}`,
   "",
   ...(ladders.length ? ladders.map(ladderReport) : ["No sessions yet.", ""]),
-  "Criteria: success if a cheap model (free or cheapest) has ≥ 70% of tailored questions rated 4–5, within 10 points " +
-    "of the premium model; failure if every cheap model is under 50%; otherwise, or with fewer than 8 people, inconclusive.",
+  "Criteria: success if a cheap model has ≥ 70% of its questions rated 4–5 for relevance, within 10 points of the " +
+    "premium model; failure if every cheap model is under 50%; otherwise, or with fewer than 8 people, inconclusive. " +
+    "Each interview gives every model about one question, so 8 people give each model about 8 ratings.",
   "",
 ].join("\n");
 

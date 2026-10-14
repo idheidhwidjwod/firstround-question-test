@@ -3,12 +3,15 @@
 // cost and time. Nothing is saved.
 //   npm run try-claude                         the fictional sample CV and job ad
 //   npm run try-claude -- cv.txt job-ad.txt    your own text files (anonymise the CV first)
-//   npm run try-claude -- --full               also the 3 standard questions and all the answer guidance
+//   npm run try-claude -- --full               also the 3 standard questions, and the notes under every question
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadEnv } from "../lib/env.js";
 import { LADDERS, USD_CHF, runAll } from "../lib/models.js";
 import { claudeStatus } from "../lib/claude.js";
+
+loadEnv();
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -45,7 +48,12 @@ runs.forEach((r, i) => {
   r.questions.forEach((q, k) => {
     if (!full && q.type !== "tailored") return;
     console.log(`   Q${k + 1} ${q.type === "tailored" ? "tailored" : "standard"}: ${q.question}`);
-    if (full) for (const p of q.points) console.log(`        · ${p.point}${p.why ? `   (why: ${p.why})` : ""}`);
+    if (full) {
+      console.log("        What the interviewer wants to hear:");
+      for (const w of q.wants) console.log(`          · ${w}`);
+      console.log("        How that relates to your experience:");
+      for (const x of q.experience) console.log(`          · ${x}`);
+    }
   });
   if (r.warnings.length) console.log(`   Warnings: ${r.warnings.join("; ")}`);
   console.log("");
