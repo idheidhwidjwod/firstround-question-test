@@ -11,7 +11,6 @@ automatically, so there is nothing to collect or send afterwards.
   most comfortable.
 - **For the ChatGPT version, a paid ChatGPT plan:** Plus, Pro or Business. On Free or Go, use the free-plan set-ups
   instead (`npm run chatgpt-free`, see the README).
-- **Access to the GitHub repo.** It is private: send Christophe your GitHub username to be added.
 - A Mac, Windows 10 or later, or Linux, and an internet connection.
 
 ## 2. Install the tools (once)
