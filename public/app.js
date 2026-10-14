@@ -48,42 +48,35 @@ function checkSetup() {
   $("#missing").textContent = missing.length ? `Still needed: ${missing.join(", ")}.` : "";
 }
 
+// The box above "Write the questions" stays empty unless something needs fixing before a session.
 async function initSetup() {
   const keys = $("#keys");
+  const warn = (text) => keys.append(el("p", { class: "error" }, text));
   try {
     const st = await api("/api/status");
     const words = ["No", "One", "Two", "Three", "Four", "Five", "Six"];
     document.querySelectorAll(".n-models").forEach((n) => (n.textContent = words[st.models] || String(st.models)));
-    if (st.ladder === "claude") {
+    const viaCli = st.ladder === "claude" || st.ladder.startsWith("chatgpt");
+    if (viaCli) {
       $("#wait-time").textContent = "up to 3 minutes (the extra-high effort model thinks longest)";
-      $("#mode-badge").textContent = "Claude models";
+      $("#mode-badge").textContent = st.ladder === "claude" ? "Claude models"
+        : st.ladder === "chatgpt-free" ? "ChatGPT models, free plan" : "ChatGPT models";
     }
     if (st.mock) {
-      keys.append(el("p", { class: "note" }, "Mock mode: no AI is called and the questions are placeholders. Mock sessions stay out of the report."));
       $("#mode-badge").textContent = "Mock mode";
       $("#mode-badge").classList.add("mock");
-    } else if (st.ladder === "claude") {
-      const c = st.claude || {};
-      const list = el("ul", { class: "keys" });
-      if (!c.found) list.append(el("li", { class: "off" }, "The claude command was not found: install Claude Code and log in"));
-      else if (c.auth === "logged out") list.append(el("li", { class: "off" }, "claude is logged out: run claude auth login in a terminal"));
-      else list.append(el("li", {}, c.auth === "api key"
-        ? `claude ${c.version}, with the API key in .env`
-        : `claude ${c.version}, with your Claude login${c.plan ? ` (${c.plan} plan)` : ""}`));
-      list.append(el("li", {}, "Your CLAUDE.md, memory, skills, plugins and connectors are switched off for these runs"));
-      keys.append(list);
+    } else if (viaCli) {
+      const c = st.cli || {};
+      const [tool, product, login] = st.ladder === "claude"
+        ? ["claude", "Claude Code", "claude auth login"] : ["codex", "Codex", "codex login"];
+      if (!c.found) warn(`The ${tool} command was not found: install ${product} and log in (see SETUP.md).`);
+      else if (c.auth === "logged out") warn(`${tool} is logged out: run ${login} in a terminal, then restart the app.`);
     } else {
-      const list = el("ul", { class: "keys" });
-      list.append(el("li", { class: st.keys.gemini ? "" : "off" }, st.keys.gemini ? "Gemini key found" : "Gemini key missing in .env: 3 sets will fail"));
-      list.append(el("li", { class: st.keys.groq ? "" : "off" }, st.keys.groq ? "Groq key found" : "Groq key missing in .env: 1 set will fail"));
-      keys.append(list);
+      if (!st.keys.gemini) warn("Gemini key missing in .env: 3 of the 4 models will fail.");
+      if (!st.keys.groq) warn("Groq key missing in .env: 1 of the 4 models will fail.");
     }
-    const sheet = { on: ["", "Results are also copied to the team's Google Sheet"],
-      mock: ["", "Mock sessions are not sent to the Google Sheet"],
-      off: ["off", "The team's Google Sheet is not set up yet: results stay on this computer"] }[st.sheet];
-    if (sheet) keys.append(el("ul", { class: "keys" }, el("li", { class: sheet[0] }, sheet[1])));
   } catch {
-    keys.append(el("p", { class: "error" }, "The server is not answering. Is npm start still running?"));
+    warn("The server is not answering. Is the app still running in the terminal?");
   }
   checkSetup();
 }
@@ -97,13 +90,6 @@ document.querySelectorAll("#kind .opt").forEach((opt) => {
 });
 for (const id of ["jobad", "cv"]) $(`#${id}`).addEventListener("input", checkSetup);
 $("#consent").addEventListener("change", checkSetup);
-
-$("#load-sample").addEventListener("click", async () => {
-  const [cv, ad] = await Promise.all(["cv-sample.txt", "job-ad-sample.txt"].map((f) => fetch(`/samples/${f}`).then((r) => r.text())));
-  $("#cv").value = cv;
-  $("#jobad").value = ad;
-  checkSetup();
-});
 
 $("#generate").addEventListener("click", async () => {
   $("#setup-error").hidden = true;
@@ -146,12 +132,11 @@ const list = (items) => el("ul", {}, ...items.map((t) => el("li", {}, t)));
 
 function questionCard(q) {
   return el("article", { class: "q" },
-    el("div", { class: "q-head" }, el("span", { class: "qn" }, `Q${q.position}`),
-      el("span", { class: `pill ${q.type}` }, q.type === "tailored" ? "Tailored to the CV" : "Standard")),
+    el("div", { class: "q-head" }, el("span", { class: "qn" }, `Q${q.position}`)),
     el("p", { class: "q-text" }, q.question),
     el("div", { class: "guide" },
       el("h4", {}, "What the interviewer wants to hear"), list(q.wants),
-      el("h4", {}, "How that relates to your experience"), list(q.experience)),
+      el("h4", {}, "Practical tips"), list(q.tips)),
     scale(q.position));
 }
 

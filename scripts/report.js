@@ -1,6 +1,7 @@
 // The results per model and the decision against the criteria set before the test (Build-to-Learn card).
 // Each session is one interview mixing the models (question n from one model); every question gets a relevance
-// score from 1 to 5. One table per ladder (Gemini/Groq, or Claude) found in the files.
+// score from 1 to 5. The primary metric uses the tailored questions: since 14 Oct every question is tailored; the
+// first design also had 3 standard questions, which are left out. One table per ladder found in the files.
 //   npm run report                                  this computer's sessions (results/sessions.jsonl)
 //   npm run report -- results/sessions.jsonl other.jsonl   several computers' files together
 // Participant numbers restart at P1 on every computer, so a person is a (file, number) pair.
@@ -49,7 +50,7 @@ const usd = (x) => (x == null ? "–" : x < 0.01 ? `$${x.toFixed(4)}` : `$${x.to
 function ladderReport(ladder) {
   const models = LADDERS[ladder];
   const sessions = [...generated.values()].filter((g) => g.ladder === ladder);
-  const per = Object.fromEntries(models.map((m) => [m.id, { m, runs: [], all: [], tailored: [], standard: [] }]));
+  const per = Object.fromEntries(models.map((m) => [m.id, { m, runs: [], tailored: [] }]));
   for (const g of sessions) for (const run of g.runs) if (!run.configError) per[run.modelId]?.runs.push(run);
 
   const ratedSessions = sessions.filter((g) => rated.has(g.sessionId));
@@ -58,9 +59,9 @@ function ladderReport(ladder) {
     for (const slot of g.interview) {
       const v = ratings[slot.position];
       const p = per[slot.modelId];
-      if (!v || !p) continue;
-      p.all.push(v);
-      (slot.position >= 4 ? p.tailored : p.standard).push(v);
+      const q = g.runs.find((r) => r.modelId === slot.modelId)?.questions?.[slot.index];
+      if (!v || !p || (q?.type ?? (slot.position >= 4 ? "tailored" : "standard")) !== "tailored") continue;
+      p.tailored.push(v);
     }
   }
   const people = new Map();
@@ -70,10 +71,8 @@ function ladderReport(ladder) {
   const kinds = [...people.values()];
 
   const rows = [
-    ["Questions rated 4 or 5 (primary metric)", (p) => pct(p.all)],
-    ["Tailored questions rated 4 or 5", (p) => pct(p.tailored)],
-    ["Standard questions rated 4 or 5", (p) => pct(p.standard)],
-    ["Mean relevance (1–5)", (p) => num(avg(p.all))],
+    ["Questions rated 4 or 5 for relevance (primary metric)", (p) => pct(p.tailored)],
+    ["Mean relevance (1–5)", (p) => num(avg(p.tailored))],
     ["Runs that worked (each run writes a full interview)", (p) => `${p.runs.filter((r) => r.ok).length}/${p.runs.length}`],
     ["Tokens per run: input / output / thinking", (p) => {
       const u = (k) => avg(p.runs.map((r) => r.usage[k]));
@@ -91,8 +90,8 @@ function ladderReport(ladder) {
 
   const cheap = models.filter((m) => m.role === "cheap");
   const premiumModel = models.find((m) => m.role === "premium");
-  const premium = share45(per[premiumModel.id].all);
-  const cheapShares = cheap.map((m) => share45(per[m.id].all));
+  const premium = share45(per[premiumModel.id].tailored);
+  const cheapShares = cheap.map((m) => share45(per[m.id].tailored));
   const cheapNames = cheap.map((m) => m.label).join(" or ");
   let decision;
   if (people.size < 8) {
@@ -108,7 +107,9 @@ function ladderReport(ladder) {
   const failed = sessions.flatMap((g) => g.runs.filter((r) => !r.ok && !r.configError)
     .map((r) => `${r.model}${r.effort ? ` (${r.effort})` : ""}: ${r.error}`));
   const comments = ratedSessions.map((g) => rated.get(g.sessionId).comment).filter(Boolean);
-  const title = ladder === "claude" ? "Claude models (claude command, own login)" : "Free and low-cost API models";
+  const title = { claude: "Claude models (claude command, own login)", chatgpt: "ChatGPT models, paid plans (codex command, own login)",
+    "chatgpt-free": "ChatGPT models, Free and Go plans (codex command, own login)" }[ladder]
+    || "Free and low-cost API models";
 
   return [
     `## ${title}`,
@@ -120,7 +121,7 @@ function ladderReport(ladder) {
     `|---|${models.map(() => "---").join("|")}|`,
     ...rows.map(([label, f]) => `| ${label} | ${models.map((m) => f(per[m.id])).join(" | ")} |`),
     "",
-    `Decision (criteria set before the test, on all questions): ${decision}`,
+    `Decision (criteria set before the test): ${decision}`,
     ...(failed.length ? ["", "Runs that failed:", ...failed.map((x) => `- ${x}`)] : []),
     ...(comments.length ? ["", "Comments:", ...comments.map((c) => `- ${c.replace(/\s+/g, " ")}`)] : []),
     "",
@@ -138,7 +139,7 @@ const md = [
   ...(ladders.length ? ladders.map(ladderReport) : ["No sessions yet.", ""]),
   "Criteria: success if a cheap model has ≥ 70% of its questions rated 4–5 for relevance, within 10 points of the " +
     "premium model; failure if every cheap model is under 50%; otherwise, or with fewer than 8 people, inconclusive. " +
-    "Each interview gives every model about one question, so 8 people give each model about 8 ratings.",
+    "Each interview gives every model one question, so 8 people give each model about 8 ratings.",
   "",
 ].join("\n");
 

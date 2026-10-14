@@ -1,6 +1,8 @@
 // Firstround question test: the local server of the Assignment 5 prototype. No dependencies.
 //   npm start            Gemini and Groq models (keys in .env)
 //   npm run claude       Claude models through the claude command and your own Claude login
+//   npm run chatgpt      OpenAI models through the codex command and your own ChatGPT login (paid plans;
+//                        chatgpt-free: the models Free and Go plans offer)
 //   npm run mock         no keys needed: placeholder questions, saved as mock (claude-mock: the same for Claude)
 // Every rated interview is also copied to the team's Google Sheet (address in lib/sheet.js, script in sheet/).
 // Privacy: the CV and the job ad go to the models and are never written to disk or sent to the sheet.
@@ -13,6 +15,7 @@ import { ROOT, loadEnv } from "./lib/env.js";
 import { LADDERS, KEY_NAMES, runAll } from "./lib/models.js";
 import { mixInterview } from "./lib/prompt.js";
 import { claudeStatus } from "./lib/claude.js";
+import { codexStatus } from "./lib/codex.js";
 import { sheetConnected, pushSession } from "./lib/sheet.js";
 
 loadEnv();
@@ -22,7 +25,9 @@ const argLadder = process.argv.includes("--ladder") ? process.argv[process.argv.
 const LADDER = argLadder || process.env.LADDER || "gemini";
 if (!LADDERS[LADDER]) throw new Error(`Unknown ladder "${LADDER}": use ${Object.keys(LADDERS).join(" or ")}`);
 const RESULTS = path.join(ROOT, "results", "sessions.jsonl");
-const cliStatus = LADDER === "claude" && !MOCK ? claudeStatus() : Promise.resolve(null);
+// The command behind the Claude or ChatGPT ladder: found? logged in? (checked once, at start)
+const cliStatus = MOCK ? Promise.resolve(null)
+  : LADDER === "claude" ? claudeStatus() : LADDER.startsWith("chatgpt") ? codexStatus() : Promise.resolve(null);
 const openSessions = new Map(); // sessionId -> { count, code, gen }: what to rate, the number, the saved record
 const sheetState = () => (sheetConnected() ? (MOCK ? "mock" : "on") : "off");
 
@@ -66,8 +71,7 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=
   ".js": "text/javascript; charset=utf-8", ".txt": "text/plain; charset=utf-8", ".svg": "image/svg+xml" };
 
 async function serveStatic(res, urlPath) {
-  const [dir, rel] = urlPath.startsWith("/samples/") ? ["samples", urlPath.slice(9)]
-    : ["public", urlPath === "/" ? "index.html" : urlPath.slice(1)];
+  const [dir, rel] = ["public", urlPath === "/" ? "index.html" : urlPath.slice(1)];
   const base = path.join(ROOT, dir);
   const file = path.resolve(base, decodeURIComponent(rel));
   if (!file.startsWith(base + path.sep)) return send(res, 404, "Not found", TYPES[".txt"]);
@@ -105,7 +109,7 @@ async function nextParticipant() {
 
 async function status(res) {
   const keys = Object.fromEntries(Object.entries(KEY_NAMES).map(([p, k]) => [p, Boolean(process.env[k])]));
-  send(res, 200, { mock: MOCK, ladder: LADDER, models: LADDERS[LADDER].length, keys, claude: await cliStatus,
+  send(res, 200, { mock: MOCK, ladder: LADDER, models: LADDERS[LADDER].length, keys, cli: await cliStatus,
                    nextParticipant: await nextParticipant(), sheet: sheetState() });
 }
 
@@ -139,7 +143,7 @@ async function generate(req, res) {
   openSessions.set(sessionId, { count: slots.length, code, gen });
   // The page gets the questions only: no model names, costs or what a question is based on.
   send(res, 200, { sessionId, participant: code, questions: slots.map(({ position, question: q }) =>
-    ({ position, type: q.type, question: q.question, wants: q.wants, experience: q.experience })) });
+    ({ position, question: q.question, wants: q.wants, tips: q.tips })) });
 }
 
 async function rate(req, res) {
@@ -192,9 +196,10 @@ http.createServer(async (req, res) => {
       if (!process.env[key]) console.log(`  ${key} is missing in .env: the ${provider} models will fail.`);
     }
   }
-  if (!MOCK && LADDER === "claude") {
+  if (!MOCK && (LADDER === "claude" || LADDER.startsWith("chatgpt"))) {
+    const [tool, account, login] = LADDER === "claude" ? ["claude", "Claude", "claude auth login"] : ["codex", "ChatGPT", "codex login"];
     cliStatus.then((s) => console.log(s?.found
-      ? `  claude ${s.version}: ${s.auth === "api key" ? "API key from .env (--bare)" : s.auth === "account" ? `your Claude login${s.plan ? ` (${s.plan})` : ""}` : "NOT LOGGED IN: run claude auth login"}`
-      : "  The claude command was not found: install Claude Code and log in."));
+      ? `  ${tool} ${s.version}: ${s.auth === "api key" ? "an API key" : s.auth === "account" ? `your ${account} login${s.plan ? ` (${s.plan})` : ""}` : `NOT LOGGED IN: run ${login}`}`
+      : `  The ${tool} command was not found: install it and log in (see SETUP.md).`));
   }
 });

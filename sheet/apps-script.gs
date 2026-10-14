@@ -14,8 +14,7 @@
 const TABS = {
   Sessions: ["Session ID", "Saved at", "Participant", "Participant is", "Models", "Comment"],
   Questions: ["Session ID", "Participant", "Participant is", "Question", "Type", "Model", "Model ID", "Effort",
-              "Relevance (1–5)", "Question text", "What the interviewer wants to hear",
-              "How that relates to your experience", "Rated 4–5"],
+              "Relevance (1–5)", "Question text", "What the interviewer wants to hear", "Practical tips", "Rated 4–5"],
   Runs: ["Session ID", "Participant", "Model", "Model ID", "Effort", "Worked", "Input tokens", "Output tokens",
          "Thinking tokens", "Cost USD (list price)", "Cost CHF", "Seconds", "Error"],
 };
@@ -43,7 +42,7 @@ function doPost(e) {
     const participant = data.mock ? "MOCK" : "P" + (realRows + 1);
     sessions.appendRow([data.sessionId, new Date(data.savedAt), participant, data.kind, data.ladder, data.comment || ""]);
     append_(tabs.Questions, data.questions.map((q) => [data.sessionId, participant, data.kind, "Q" + q.position, q.type,
-      q.model, q.modelId, q.effort, q.relevance, q.question, q.wants, q.experience, q.relevance >= 4 ? 1 : 0]));
+      q.model, q.modelId, q.effort, q.relevance, q.question, q.wants, q.tips || q.experience || "", q.relevance >= 4 ? 1 : 0]));
     append_(tabs.Runs, data.runs.map((r) => [data.sessionId, participant, r.model, r.modelId, r.effort, r.ok,
       r.input, r.output, r.thinking, r.costUSD, r.costCHF, r.seconds, r.error]));
     return reply_({ ok: true, participant });
@@ -60,11 +59,9 @@ function setUp_(ss) {
   const tabs = {};
   for (const [name, headers] of Object.entries(TABS)) {
     const sheet = ss.getSheetByName(name) || ss.insertSheet(name);
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(headers);
-      sheet.setFrozenRows(1);
-      sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
-    }
+    // The header row is rewritten every time, so a renamed column (e.g. "Practical tips") updates by itself.
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
+    sheet.setFrozenRows(1);
     tabs[name] = sheet;
   }
   if (!ss.getSheetByName("Summary")) {

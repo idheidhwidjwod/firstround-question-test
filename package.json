@@ -1,16 +1,23 @@
 {
   "name": "firstround-question-test",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Assignment 5 prototype: do cheap AI models write CV-tailored interview questions as relevant as a premium model's, and what does a run really cost?",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
     "mock": "node server.js --mock",
     "claude": "node server.js --ladder claude",
     "claude-mock": "node server.js --ladder claude --mock",
-    "try-claude": "node scripts/try-claude.js",
+    "chatgpt": "node server.js --ladder chatgpt",
+    "chatgpt-mock": "node server.js --ladder chatgpt --mock",
+    "try-claude": "node scripts/try.js claude",
+    "try-chatgpt": "node scripts/try.js chatgpt",
+    "chatgpt-free": "node server.js --ladder chatgpt-free",
+    "try-chatgpt-free": "node scripts/try.js chatgpt-free",
     "report": "node scripts/report.js",
     "sync-sheet": "node scripts/sync-sheet.js"
   }
