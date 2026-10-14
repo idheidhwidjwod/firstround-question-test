@@ -17,6 +17,7 @@ import { mixInterview } from "./lib/prompt.js";
 import { claudeStatus } from "./lib/claude.js";
 import { codexStatus } from "./lib/codex.js";
 import { sheetConnected, pushSession } from "./lib/sheet.js";
+import { SURVEY } from "./lib/survey.js";
 
 loadEnv();
 const PORT = Number(process.env.PORT) || 8787;
@@ -110,7 +111,7 @@ async function nextParticipant() {
 async function status(res) {
   const keys = Object.fromEntries(Object.entries(KEY_NAMES).map(([p, k]) => [p, Boolean(process.env[k])]));
   send(res, 200, { mock: MOCK, ladder: LADDER, models: LADDERS[LADDER].length, keys, cli: await cliStatus,
-                   nextParticipant: await nextParticipant(), sheet: sheetState() });
+                   nextParticipant: await nextParticipant(), sheet: sheetState(), survey: SURVEY });
 }
 
 async function generate(req, res) {
@@ -159,7 +160,13 @@ async function rate(req, res) {
     if (!(Number.isInteger(v) && v >= 1 && v <= 5)) throw fail(400, `Question ${pos} is not rated yet.`);
     ratings[pos] = v;   // relevance, 1 to 5
   }
-  const rated = { type: "rated", sessionId: b.sessionId, at: new Date().toISOString(), participant: code, ratings,
+  const survey = {};   // the two questions about paying, asked after the interview questions
+  for (const q of SURVEY) {
+    const code = b.survey?.[q.key];
+    if (!q.options.some((o) => o.code === code)) throw fail(400, "The two last questions are not answered yet.");
+    survey[q.key] = code;
+  }
+  const rated = { type: "rated", sessionId: b.sessionId, at: new Date().toISOString(), participant: code, ratings, survey,
                   comment: String(b.comment || "").slice(0, 2000) };
   await save(rated);
   openSessions.delete(b.sessionId);

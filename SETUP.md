@@ -83,7 +83,7 @@ You don't need `npm install` (the app has no dependencies) or a `.env` file. Run
    - open http://127.0.0.1:8787;
    - paste any job ad and CV, for example the texts in `samples/job-ad-sample.txt` and `samples/cv-sample.txt`;
    - choose who the participant is, and tick the consent box;
-   - click "Write the questions", rate the 5 questions, and save;
+   - click "Write the questions", rate the 5 questions, answer the two last questions, and save;
    - stop the app with Ctrl+C in the terminal.
 3. **Do the real models answer?** This one is optional and uses about 30 seconds of your plan. Nothing is saved or sent:
    ```bash
@@ -107,7 +107,7 @@ Then follow "Running a session" in the [README](README.md#running-a-session-abou
 
 1. Anonymise the CV.
 2. Paste the job ad and the CV, then click "Write the questions". It takes up to about a minute.
-3. The participant rates the 5 questions, then you save.
+3. The participant rates the 5 questions and answers the two last questions about paying, then you save.
 
 The end screen confirms "saved on this computer and in the team's Google Sheet".
 
@@ -130,7 +130,7 @@ Then start the app again.
 |---|---|
 | `npm error … Could not read package.json` | You are not in the project folder. Run `cd firstround-question-test`, then the command again. |
 | `node: command not found`, or `node -v` below v20 | Install Node.js 20 or later (step 2), then open a new terminal. |
-| `git clone` says "Repository not found", or asks for a password | The repo is private. Send Christophe your GitHub username. To log in to GitHub, use GitHub Desktop or `gh auth login`. |
+| `git clone` says "Repository not found", or asks for a password | Check the address: copy it exactly from step 3. The repo is public, so no GitHub account is needed. |
 | `EADDRINUSE` or "port 8787 is already in use" | The app is already running in another terminal: use that one, or stop it with Ctrl+C. To use another port, run `PORT=8788 npm run claude` (Mac/Linux) or `$env:PORT=8788; npm run claude` (PowerShell), then open http://127.0.0.1:8788. |
 | The page doesn't open | Keep the terminal running `npm run claude` open, and use exactly http://127.0.0.1:8787. |
 | A warning says "The claude command was not found" | Install Claude Code (step 2) and open a new terminal. `claude --version` must work in the terminal where you start the app. On Windows, use the PowerShell installer or WinGet. |

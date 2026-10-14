@@ -12,7 +12,8 @@
 // of the Summary. An interview that is sent twice is only added once.
 
 const TABS = {
-  Sessions: ["Session ID", "Saved at", "Participant", "Participant is", "Models", "Comment"],
+  Sessions: ["Session ID", "Saved at", "Participant", "Participant is", "Models", "Comment", "Preferred payment",
+             "Most per month"],
   Questions: ["Session ID", "Participant", "Participant is", "Question", "Type", "Model", "Model ID", "Effort",
               "Relevance (1–5)", "Question text", "What the interviewer wants to hear", "Practical tips", "Rated 4–5"],
   Runs: ["Session ID", "Participant", "Model", "Model ID", "Effort", "Worked", "Input tokens", "Output tokens",
@@ -40,7 +41,9 @@ function doPost(e) {
 
     const realRows = sessions.getLastRow() - 1 - countMock_(sessions);
     const participant = data.mock ? "MOCK" : "P" + (realRows + 1);
-    sessions.appendRow([data.sessionId, new Date(data.savedAt), participant, data.kind, data.ladder, data.comment || ""]);
+    const survey = data.survey || {};
+    sessions.appendRow([data.sessionId, new Date(data.savedAt), participant, data.kind, data.ladder, data.comment || "",
+      survey.payment || "", survey.monthly || ""]);
     append_(tabs.Questions, data.questions.map((q) => [data.sessionId, participant, data.kind, "Q" + q.position, q.type,
       q.model, q.modelId, q.effort, q.relevance, q.question, q.wants, q.tips || q.experience || "", q.relevance >= 4 ? 1 : 0]));
     append_(tabs.Runs, data.runs.map((r) => [data.sessionId, participant, r.model, r.modelId, r.effort, r.ok,
@@ -81,6 +84,15 @@ function setUp_(ss) {
     s.getRange("D3:D22").setNumberFormat("0.0");
     s.getRange("C25:D33").setNumberFormat("0.0000");
     s.setColumnWidth(1, 220);
+  }
+  // Answers to the two questions about paying (added on 14 Oct; written into an existing Summary too).
+  const sum = ss.getSheetByName("Summary");
+  if (sum.getRange("A35").getValue() === "") {
+    const real = "C <> 'MOCK'";
+    sum.getRange("A35").setValue("How would you prefer to pay?").setFontWeight("bold");
+    sum.getRange("A36").setFormula(`=IFERROR(QUERY(Sessions!A1:H, "select G, count(A) where G is not null and G <> '' and ${real} group by G label G 'Answer', count(A) 'People'", 1), "No answers yet")`);
+    sum.getRange("D35").setValue("Most you would spend on practice in one month").setFontWeight("bold");
+    sum.getRange("D36").setFormula(`=IFERROR(QUERY(Sessions!A1:H, "select H, count(A) where H is not null and H <> '' and ${real} group by H label H 'Answer', count(A) 'People'", 1), "No answers yet")`);
   }
   return tabs;
 }

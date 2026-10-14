@@ -111,6 +111,10 @@ textarea:focus, input:not([type]):focus { border-color: var(--orange); outline: 
 .scale button:hover { border-color: var(--orange); }
 .scale button[aria-checked="true"] { background: var(--orange); border-color: var(--orange); color: #fff; }
 .scale-ends { display: flex; justify-content: space-between; max-width: 290px; font-size: 13px; color: var(--muted); margin-top: 6px; gap: 12px; }
+.survey { margin-top: 22px; display: grid; gap: 18px; }
+.survey .label { margin: 0; }
+.survey .rate-q { font-size: 17px; }
+.survey .choice { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 .comment { margin-top: 22px; }
 .cta-row { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-top: 22px; }
 .cta-row.left { justify-content: flex-start; }

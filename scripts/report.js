@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { LADDERS, USD_CHF, costUSD } from "../lib/models.js";
+import { SURVEY } from "../lib/survey.js";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -129,6 +130,24 @@ function ladderReport(ladder) {
 }
 
 const ladders = Object.keys(LADDERS).filter((l) => [...generated.values()].some((g) => g.ladder === l));
+
+// The two questions about paying: one answer per person, whatever models they rated.
+function surveyReport() {
+  const answers = [...generated.values()].map((g) => rated.get(g.sessionId)?.survey).filter(Boolean);
+  if (!answers.length) return [];
+  return [
+    `## Paying for interview practice (${answers.length} ${answers.length === 1 ? "person" : "people"})`,
+    "",
+    ...SURVEY.flatMap((q) => [
+      `**${q.question}**`,
+      "",
+      "| Answer | People |",
+      "|---|---|",
+      ...q.options.map((o) => `| ${o.label} | ${answers.filter((a) => a[q.key] === o.code).length} |`),
+      "",
+    ]),
+  ];
+}
 const md = [
   "# Question test: results",
   "",
@@ -141,6 +160,7 @@ const md = [
     "premium model; failure if every cheap model is under 50%; otherwise, or with fewer than 8 people, inconclusive. " +
     "Each interview gives every model one question, so 8 people give each model about 8 ratings.",
   "",
+  ...surveyReport(),
 ].join("\n");
 
 mkdirSync(path.join(ROOT, "results"), { recursive: true });

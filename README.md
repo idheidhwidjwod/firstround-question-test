@@ -20,6 +20,9 @@ CHF 0.30 including card fees, which is the 80% margin of a typical SaaS. That on
 3. The participant sees **one interview that mixes the models**. Each question comes from a model drawn at random,
    so with 5 models each model gives one question. The mix never asks twice about the same topic.
 4. The participant rates **every question for relevance**, 1 to 5. They don't know which model wrote which.
+   Then they answer **two last questions about paying**: how they would prefer to pay (per interview, a pack of 10,
+   a monthly subscription, or not at all), and the most they would spend on interview practice in one month
+   (nothing, up to CHF 5, 10, 20 or 30, or more). The questions are in `lib/survey.js`.
 5. The app logs each model's **real token use, thinking included**, its list-price cost and its speed for the full
    interview it wrote.
 
@@ -180,8 +183,9 @@ Every rated interview is also copied to one shared Google Sheet, so the whole te
 Nobody has to set anything up: the sheet's address is built into `lib/sheet.js`. Practice (mock) sessions are not sent.
 
 - **Tabs:**
-  - **Summary:** share of questions rated 4–5 per model, tailored questions only, cost and time per model, number of people.
-  - **Sessions:** one row per interview.
+  - **Summary:** share of questions rated 4–5 per model, cost and time per model, number of people, and the answers
+    to the two questions about paying.
+  - **Sessions:** one row per interview, with the answers to the two questions about paying.
   - **Questions:** one row per question, with its model, relevance score and notes.
   - **Runs:** one row per model, with tokens, cost and time.
 - **Participant numbers:** the sheet numbers participants for the whole team (P1, P2…). The page never shows them.
@@ -217,6 +221,7 @@ Each interview gives every model one question, so 8 people give each model about
 | `public/` | the page (Firstround style) |
 | `scripts/report.js` | the results per model and the decision, one table per ladder |
 | `scripts/try.js` | the Claude or ChatGPT version in the terminal (`npm run try-claude`, `npm run try-chatgpt`) |
+| `lib/survey.js` | the two questions about paying, asked after the interview questions |
 | `lib/sheet.js` | the copy to the team's Google Sheet (its address is set here) |
 | `sheet/apps-script.gs` | the script that receives the interviews inside the Google Sheet |
 | `scripts/sync-sheet.js` | sends to the sheet what is missing (`npm run sync-sheet`) |

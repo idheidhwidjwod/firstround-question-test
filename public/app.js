@@ -1,7 +1,7 @@
 // The page: Setup → (loading) → Rate → Done. Model text is always inserted as text, never as HTML.
 const $ = (sel) => document.querySelector(sel);
 // Participants are numbered by the server (P1, P2… on this computer) and the number is never shown.
-const state = { kind: null, sessionId: null, questions: [], ratings: {} };
+const state = { kind: null, sessionId: null, questions: [], ratings: {}, surveyDef: [], survey: {} };
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -54,6 +54,7 @@ async function initSetup() {
   const warn = (text) => keys.append(el("p", { class: "error" }, text));
   try {
     const st = await api("/api/status");
+    state.surveyDef = st.survey || [];
     const words = ["No", "One", "Two", "Three", "Four", "Five", "Six"];
     document.querySelectorAll(".n-models").forEach((n) => (n.textContent = words[st.models] || String(st.models)));
     const viaCli = st.ladder === "claude" || st.ladder.startsWith("chatgpt");
@@ -140,24 +141,46 @@ function questionCard(q) {
     scale(q.position));
 }
 
+// The two questions about paying, after the interview questions (defined in lib/survey.js).
+function surveyQuestion(q) {
+  const id = `survey-${q.key}`;
+  const group = el("div", { class: "choice", role: "radiogroup", "aria-labelledby": id });
+  for (const o of q.options) {
+    const b = el("button", { class: "opt", type: "button", role: "radio", "aria-checked": "false" }, el("b", {}, o.label));
+    b.addEventListener("click", () => {
+      state.survey[q.key] = o.code;
+      group.querySelectorAll(".opt").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+      updateProgress();
+    });
+    group.append(b);
+  }
+  return el("div", { class: "survey-q" }, el("p", { class: "rate-q", id }, q.question), group);
+}
+
 function renderRate() {
   state.ratings = {};
+  state.survey = {};
   $("#comment").value = "";
   $("#questions").replaceChildren(...state.questions.map(questionCard));
+  $("#survey").replaceChildren(el("p", { class: "label" }, "Two last questions"), ...state.surveyDef.map(surveyQuestion));
+  $("#survey").hidden = state.surveyDef.length === 0;
   updateProgress();
 }
 
 function updateProgress() {
-  const done = state.questions.filter((q) => state.ratings[q.position]).length;
-  $("#rate-progress").textContent = `${done} of ${state.questions.length} questions rated`;
-  $("#submit").disabled = done < state.questions.length;
+  const rated = state.questions.filter((q) => state.ratings[q.position]).length;
+  const left = state.surveyDef.filter((q) => !state.survey[q.key]).length;
+  $("#rate-progress").textContent = `${rated} of ${state.questions.length} questions rated` +
+    (left ? ` · ${left} last question${left > 1 ? "s" : ""} to answer` : "");
+  $("#submit").disabled = rated < state.questions.length || left > 0;
 }
 
 $("#submit").addEventListener("click", async () => {
   $("#submit").disabled = true;
   $("#rate-error").hidden = true;
   try {
-    const saved = await api("/api/rate", { sessionId: state.sessionId, ratings: state.ratings, comment: $("#comment").value });
+    const saved = await api("/api/rate", { sessionId: state.sessionId, ratings: state.ratings, survey: state.survey,
+      comment: $("#comment").value });
     const sheet = saved.sheet || {};
     $("#done-text").textContent = sheet.state === "on" && sheet.ok
       ? "The ratings are saved on this computer and in the team's Google Sheet."
